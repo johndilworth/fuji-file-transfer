@@ -21,10 +21,12 @@ This project includes a **compile-only CI workflow** that builds the app for iOS
 - **What it does**: Validates that the code compiles successfully without requiring signing credentials
 - **What it doesn't do**: Does not create device builds, TestFlight uploads, or App Store releases
 - **Requirements**: None - runs on free GitHub Actions runners with no Apple Developer Program needed
+- **Xcode version**: Uses the default Xcode on `macos-latest` runners (automatically updated by GitHub)
 
 The workflow builds for iOS Simulator using `CODE_SIGNING_ALLOWED=NO`, which means:
 - ✅ Code compilation and SwiftUI syntax validation work
 - ✅ Build errors are caught automatically
+- ✅ Flexible simulator destination that works across runner updates
 - ❌ Device installation requires a paid Apple Developer Program membership ($99/year)
 - ❌ TestFlight/App Store distribution not included
 
