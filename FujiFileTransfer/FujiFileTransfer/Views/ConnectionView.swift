@@ -2,116 +2,205 @@ import SwiftUI
 
 struct ConnectionView: View {
     @StateObject private var viewModel = ConnectionViewModel()
+    @State private var showingSetupHelp = false
     @State private var showingUSBGuide = false
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
+                statusBar
+                
                 if viewModel.isConnected {
-                    connectedContent
+                    if let transport = viewModel.getTransport() {
+                        ThumbnailGridView(transport: transport)
+                    }
                 } else {
-                    disconnectedContent
+                    emptyState
                 }
             }
-            .padding()
             .navigationTitle("Fuji File Transfer")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingUSBGuide = true
+                    Menu {
+                        Button {
+                            showingSetupHelp = true
+                        } label: {
+                            Label("Camera Setup", systemImage: "camera")
+                        }
+                        
+                        Button {
+                            showingUSBGuide = true
+                        } label: {
+                            Label("USB Import Guide", systemImage: "cable.connector")
+                        }
+                        
+                        #if targetEnvironment(simulator)
+                        Divider()
+                        Toggle("Mock Mode", isOn: $viewModel.useMockMode)
+                        #endif
                     } label: {
-                        Image(systemName: "info.circle")
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
+            }
+            .sheet(isPresented: $showingSetupHelp) {
+                SetupHelpView()
             }
             .sheet(isPresented: $showingUSBGuide) {
                 USBGuideView()
             }
+            .task {
+                await viewModel.connect()
+            }
         }
     }
     
-    private var disconnectedContent: some View {
-        VStack(spacing: 24) {
+    private var statusBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: statusIcon)
+                .foregroundColor(statusColor)
+                .symbolEffect(.pulse, isActive: viewModel.isConnecting)
+                .contentTransition(.symbolEffect(.replace))
+            
+            Text(statusText)
+                .font(.subheadline)
+                .foregroundColor(statusColor)
+                .contentTransition(.numericText())
+            
             Spacer()
             
-            Image(systemName: "camera.fill")
-                .font(.system(size: 80))
-                .foregroundColor(.secondary)
+            if viewModel.isConnecting {
+                ProgressView()
+                    .controlSize(.small)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.background.secondary)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.connectionState)
+    }
+    
+    private var statusIcon: String {
+        switch viewModel.connectionState {
+        case .connected:
+            return viewModel.useMockMode ? "wand.and.stars.inverse" : "wifi"
+        case .connecting:
+            return "antenna.radiowaves.left.and.right"
+        case .error:
+            return "exclamationmark.triangle"
+        case .disconnected:
+            return "camera"
+        }
+    }
+    
+    private var statusColor: Color {
+        switch viewModel.connectionState {
+        case .connected:
+            return .green
+        case .connecting:
+            return .orange
+        case .error:
+            return .red
+        case .disconnected:
+            return .secondary
+        }
+    }
+    
+    private var statusText: String {
+        switch viewModel.connectionState {
+        case .connected:
+            return viewModel.useMockMode ? "Demo Mode — Sample Photos" : "Connected"
+        case .connecting:
+            return "Connecting..."
+        case .error(let message):
+            return "Error: \(message)"
+        case .disconnected:
+            return "Not Connected"
+        }
+    }
+    
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer()
             
-            Text("Connect to Fujifilm X-T5")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Camera Setup:")
-                    .font(.headline)
+            VStack(spacing: 12) {
+                Text("No Photos")
+                    .font(.title3)
+                    .fontWeight(.semibold)
                 
-                setupStep(number: "1", text: "On camera, go to: Menu → Connection Setting → Wireless Settings → Wireless Communication")
-                setupStep(number: "2", text: "Select \"Connect to Smartphone\" and tap OK")
-                setupStep(number: "3", text: "Join the camera's Wi-Fi network on your iPhone")
-                setupStep(number: "4", text: "Return to this app and tap Connect")
+                Text("Camera not connected")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-            
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            
-            #if targetEnvironment(simulator)
-            Toggle("Use Mock Mode (Simulator)", isOn: $viewModel.useMockMode)
-                .padding(.horizontal)
-            #endif
             
             Button {
-                Task {
-                    await viewModel.connect()
-                }
+                showingSetupHelp = true
             } label: {
-                if viewModel.isConnecting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text("Connect to Camera")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
+                Text("Camera Setup")
+            }
+            .buttonStyle(.bordered)
+            
+            Spacer()
+        }
+        .padding()
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+}
+
+struct SetupHelpView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Camera Setup")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("On your Fujifilm X-T5:")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("1. Menu → Connection Setting → Wireless Settings")
+                        Text("2. Select \"Connect to Smartphone\" → OK")
+                        Text("3. Camera creates Wi-Fi network")
+                    }
+                    .font(.subheadline)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    
+                    Text("On your iPhone:")
+                        .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("1. Settings → Wi-Fi")
+                        Text("2. Join camera's network (X-T5_XXXX)")
+                        Text("3. Return to this app")
+                    }
+                    .font(.subheadline)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    
+                    Text("App will connect automatically and show photos.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+            .navigationTitle("Setup Help")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(viewModel.isConnecting)
-            
-            Spacer()
-        }
-    }
-    
-    private var connectedContent: some View {
-        VStack {
-            if let transport = viewModel.getTransport() {
-                ThumbnailGridView(transport: transport)
-            }
-        }
-    }
-    
-    private func setupStep(number: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(number)
-                .fontWeight(.bold)
-                .frame(width: 24, height: 24)
-                .background(Color.accentColor)
-                .foregroundColor(.white)
-                .clipShape(Circle())
-            
-            Text(text)
-                .font(.subheadline)
-            
-            Spacer()
         }
     }
 }

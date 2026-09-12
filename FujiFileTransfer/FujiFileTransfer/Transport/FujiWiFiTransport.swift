@@ -1,5 +1,12 @@
 import Foundation
 
+// TODO: Protocol Implementation Notes
+// - This is a clean-room implementation based on libfuji and public protocol docs
+// - X-T5 specific behavior may differ from other Fujifilm cameras
+// - Some operations may require user confirmation on camera screen (OpenSession, RemoteMode)
+// - Error recovery and reconnection logic is basic - may need camera power cycle
+// - Timeout handling is minimal - long operations may hang without progress
+
 class FujiWiFiTransport: CameraTransport {
     private(set) var connectionState: CameraConnectionState = .disconnected
     var onStateChanged: ((CameraConnectionState) -> Void)?
@@ -18,14 +25,23 @@ class FujiWiFiTransport: CameraTransport {
         updateConnectionState(.connecting)
         
         do {
+            // TODO: Add connection timeout (current: may hang indefinitely)
             try await networkManager.connect(host: host, port: port)
+            
+            // TODO: Fuji init may need retry logic if camera is "thinking"
             try await performFujiInit()
+            
+            // TODO: OpenSession may require user to press OK on camera - no feedback yet
             try await openSession()
             
             updateConnectionState(.connected)
-        } catch {
-            updateConnectionState(.error(error.localizedDescription))
+        } catch let error as TransportError {
+            let message = error.localizedDescription ?? "Unknown connection error"
+            updateConnectionState(.error(message))
             throw error
+        } catch {
+            updateConnectionState(.error("Connection failed: \(error.localizedDescription)"))
+            throw TransportError.connectionFailed(error.localizedDescription)
         }
     }
     
@@ -42,15 +58,19 @@ class FujiWiFiTransport: CameraTransport {
             throw TransportError.notConnected
         }
         
+        // TODO: May need to enter RemoteMode first on newer cameras (X-T5)
+        // TODO: Handle multiple storage IDs (SD card slot 1 & 2)
         let storageIDs = try await getStorageIDs()
         guard let storageID = storageIDs.first else {
-            return []
+            throw TransportError.protocolError("No storage found on camera")
         }
         
+        // TODO: Add filter for image-only objects (skip folders, movies if needed)
         let objectHandles = try await getObjectHandles(storageID: storageID)
         
         var images: [CameraImage] = []
         for handle in objectHandles {
+            // TODO: Better error handling - currently skips failed objects silently
             if let imageInfo = try? await getObjectInfo(objectHandle: handle) {
                 images.append(imageInfo)
             }

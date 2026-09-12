@@ -9,7 +9,7 @@ class MockTransport: CameraTransport {
     private let shouldSimulateError: Bool
     private let connectionDelay: TimeInterval
     
-    init(shouldSimulateError: Bool = false, connectionDelay: TimeInterval = 1.0) {
+    init(shouldSimulateError: Bool = false, connectionDelay: TimeInterval = 0.8) {
         self.shouldSimulateError = shouldSimulateError
         self.connectionDelay = connectionDelay
         
@@ -17,55 +17,73 @@ class MockTransport: CameraTransport {
             CameraImage(
                 id: 1,
                 filename: "DSCF0001.JPG",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "IMG 1"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🏔️\nLandscape"),
                 fullImageData: Self.generatePlaceholderImage(text: "DSCF0001"),
                 fileSize: 4_500_000,
-                createdDate: Date().addingTimeInterval(-3600),
+                createdDate: Date().addingTimeInterval(-7200),
                 format: .jpeg
             ),
             CameraImage(
                 id: 2,
                 filename: "DSCF0002.JPG",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "IMG 2"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "📷\nPortrait"),
                 fullImageData: Self.generatePlaceholderImage(text: "DSCF0002"),
                 fileSize: 5_200_000,
-                createdDate: Date().addingTimeInterval(-3000),
+                createdDate: Date().addingTimeInterval(-6000),
                 format: .jpeg
             ),
             CameraImage(
                 id: 3,
                 filename: "DSCF0003.JPG",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "IMG 3"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🌆\nSunset"),
                 fullImageData: Self.generatePlaceholderImage(text: "DSCF0003"),
                 fileSize: 3_800_000,
-                createdDate: Date().addingTimeInterval(-2400),
+                createdDate: Date().addingTimeInterval(-4800),
                 format: .jpeg
             ),
             CameraImage(
                 id: 4,
                 filename: "DSCF0004.RAF",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "RAW 4"),
-                fullImageData: Self.generatePlaceholderImage(text: "DSCF0004"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "📸\nRAW"),
+                fullImageData: Self.generatePlaceholderImage(text: "DSCF0004\nRAW FILE"),
                 fileSize: 52_000_000,
-                createdDate: Date().addingTimeInterval(-1800),
+                createdDate: Date().addingTimeInterval(-3600),
                 format: .raw
             ),
             CameraImage(
                 id: 5,
                 filename: "DSCF0005.JPG",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "IMG 5"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🌸\nMacro"),
                 fullImageData: Self.generatePlaceholderImage(text: "DSCF0005"),
                 fileSize: 4_100_000,
-                createdDate: Date().addingTimeInterval(-1200),
+                createdDate: Date().addingTimeInterval(-2400),
                 format: .jpeg
             ),
             CameraImage(
                 id: 6,
                 filename: "DSCF0006.JPG",
-                thumbnailData: Self.generatePlaceholderThumbnail(text: "IMG 6"),
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🏙️\nStreet"),
                 fullImageData: Self.generatePlaceholderImage(text: "DSCF0006"),
                 fileSize: 4_700_000,
+                createdDate: Date().addingTimeInterval(-1200),
+                format: .jpeg
+            ),
+            CameraImage(
+                id: 7,
+                filename: "DSCF0007.JPG",
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🐦\nWildlife"),
+                fullImageData: Self.generatePlaceholderImage(text: "DSCF0007"),
+                fileSize: 6_200_000,
                 createdDate: Date().addingTimeInterval(-600),
+                format: .jpeg
+            ),
+            CameraImage(
+                id: 8,
+                filename: "DSCF0008.JPG",
+                thumbnailData: Self.generatePlaceholderThumbnail(text: "🎭\nArt"),
+                fullImageData: Self.generatePlaceholderImage(text: "DSCF0008"),
+                fileSize: 4_900_000,
+                createdDate: Date().addingTimeInterval(-300),
                 format: .jpeg
             )
         ]
@@ -128,7 +146,8 @@ class MockTransport: CameraTransport {
         var transferred: UInt64 = 0
         
         while transferred < totalSize {
-            try await Task.sleep(nanoseconds: 50_000_000)
+            let sleepTime: UInt64 = image.format == .raw ? 100_000_000 : 40_000_000
+            try await Task.sleep(nanoseconds: sleepTime)
             
             transferred = min(transferred + chunkSize, totalSize)
             progress?(transferred, totalSize)
