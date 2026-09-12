@@ -19,8 +19,7 @@ struct ThumbnailGridView: View {
             }
             
             if viewModel.isImporting {
-                ImportProgressView(progress: $viewModel.importProgress)
-                    .transition(.move(edge: .bottom))
+                compactProgressView
             }
         }
         .task {
@@ -61,87 +60,160 @@ struct ThumbnailGridView: View {
     private var imageGridView: some View {
         VStack(spacing: 0) {
             toolbarView
-                .padding()
-                .background(Color(.systemBackground))
             
-            Divider()
-            
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 4) {
-                    ForEach(viewModel.images) { image in
-                        ThumbnailCell(
-                            image: image,
-                            isSelected: viewModel.selectedImageIDs.contains(image.id)
-                        )
-                        .onTapGesture {
-                            viewModel.toggleSelection(image.id)
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 4) {
+                        ForEach(viewModel.images) { image in
+                            ThumbnailCell(
+                                image: image,
+                                isSelected: viewModel.selectedImageIDs.contains(image.id)
+                            )
+                            .onTapGesture {
+                                viewModel.toggleSelection(image.id)
+                            }
                         }
                     }
+                    .padding(4)
+                    .padding(.bottom, 80)
                 }
-                .padding(4)
+                
+                importButton
             }
         }
     }
     
-    private var toolbarView: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("\(viewModel.images.count) images")
-                    .font(.headline)
-                
-                if viewModel.newImagesCount > 0 {
-                    Text("• \(viewModel.newImagesCount) new")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
+    private var importButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 if viewModel.hasSelection {
-                    Button("Deselect All") {
+                    viewModel.importSelected()
+                } else {
+                    viewModel.importAllNew()
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "square.and.arrow.down")
+                    .symbolEffect(.bounce, value: viewModel.selectedImageIDs.count)
+                
+                Group {
+                    if viewModel.hasSelection {
+                        Text("Import \(viewModel.selectedImageIDs.count)")
+                    } else if viewModel.newImagesCount > 0 {
+                        Text("Import All New")
+                    } else {
+                        Text("Select Photos")
+                    }
+                }
+                .contentTransition(.numericText())
+            }
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!viewModel.hasSelection && viewModel.newImagesCount == 0)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.background)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.hasSelection)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.newImagesCount)
+    }
+    
+    private var toolbarView: some View {
+        HStack {
+            Text("\(viewModel.images.count) photos")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .contentTransition(.numericText())
+            
+            if viewModel.newImagesCount > 0 {
+                Text("• \(viewModel.newImagesCount) new")
+                    .font(.subheadline)
+                    .foregroundColor(.green)
+                    .contentTransition(.numericText())
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+            
+            Spacer()
+            
+            if viewModel.hasSelection {
+                Button("Clear") {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         viewModel.deselectAll()
                     }
-                    .font(.subheadline)
-                } else {
-                    Menu {
-                        Button("Select All") {
-                            viewModel.selectAll()
-                        }
-                        Button("Select All New") {
-                            viewModel.selectAllNew()
-                        }
-                    } label: {
-                        Text("Select")
-                            .font(.subheadline)
+                }
+                .font(.subheadline)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            } else if viewModel.newImagesCount > 0 {
+                Button("Select All New") {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.selectAllNew()
                     }
+                }
+                .font(.subheadline)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.background.secondary)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.hasSelection)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.newImagesCount)
+    }
+}
+
+    private var compactProgressView: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.small)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Importing \(completedCount) of \(viewModel.importProgress.count)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .contentTransition(.numericText())
+                
+                if let current = currentImport {
+                    Text(current.image.filename)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
                 }
             }
             
-            if viewModel.hasSelection {
-                HStack(spacing: 12) {
-                    Text("\(viewModel.selectedImageIDs.count) selected")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Button("Import Selected") {
-                        viewModel.importSelected()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                }
-            } else if viewModel.newImagesCount > 0 {
-                HStack {
-                    Spacer()
-                    
-                    Button("Import All New (\(viewModel.newImagesCount))") {
-                        viewModel.importAllNew()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+            Spacer()
+            
+            Button("Cancel") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.cancelImport()
                 }
             }
+            .font(.subheadline)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.background.secondary)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: completedCount)
+    }
+    
+    private var completedCount: Int {
+        viewModel.importProgress.filter { item in
+            if case .completed = item.state {
+                return true
+            }
+            return false
+        }.count
+    }
+    
+    private var currentImport: ImportProgress? {
+        viewModel.importProgress.first { item in
+            if case .downloading = item.state {
+                return true
+            }
+            return false
         }
     }
 }
@@ -160,34 +232,38 @@ struct ThumbnailCell: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: geometry.size.width)
                         .clipped()
+                        .opacity(isSelected ? 1.0 : (image.isImported ? 0.6 : 1.0))
                 } else {
                     Rectangle()
-                        .fill(Color(.systemGray5))
+                        .fill(Color(.systemGray6))
                         .overlay {
-                            Image(systemName: "photo")
-                                .foregroundColor(.secondary)
+                            ProgressView()
+                                .controlSize(.small)
                         }
                 }
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.accentColor)
-                        .background(Circle().fill(Color.white))
-                        .padding(4)
+                        .font(.title3)
+                        .foregroundStyle(.white, .tint)
+                        .shadow(radius: 2)
+                        .padding(8)
+                        .transition(.scale.combined(with: .opacity))
                 }
                 
-                if image.isImported {
+                if !isSelected && !image.isImported {
                     VStack {
                         Spacer()
                         HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                                .background(Circle().fill(Color.white.opacity(0.9)))
-                                .font(.caption)
+                            Circle()
+                                .fill(.green)
+                                .frame(width: 6, height: 6)
+                                .shadow(radius: 1)
                             Spacer()
                         }
-                        .padding(4)
+                        .padding(8)
                     }
+                    .transition(.opacity)
                 }
                 
                 if image.format == .raw {
@@ -197,23 +273,21 @@ struct ThumbnailCell: View {
                             Spacer()
                             Text("RAW")
                                 .font(.caption2)
-                                .fontWeight(.bold)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.black.opacity(0.7))
-                                .foregroundColor(.white)
-                                .cornerRadius(4)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
-                        .padding(4)
+                        .padding(8)
                     }
                 }
             }
-            .overlay(
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
-            )
+            .contentShape(Rectangle())
         }
         .aspectRatio(1, contentMode: .fit)
-        .cornerRadius(2)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .scaleEffect(isSelected ? 0.95 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
 }

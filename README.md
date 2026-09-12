@@ -2,17 +2,36 @@
 
 An iOS app for transferring photos from Fujifilm X-T5 cameras to iPhone over Wi-Fi, designed to be faster and less frustrating than Fujifilm's XApp.
 
+## 📱 Without a Mac This Week?
+
+**You can still contribute and make progress:**
+
+- ✅ **Review & merge PRs** from GitHub mobile — CI validates all builds automatically
+- ✅ **Watch Actions tab** for build status — green checkmarks mean code compiles
+- ✅ **Read and improve docs** — README, DEVELOPMENT.md are editable from phone
+- ✅ **Test real transfers** — Use camera's USB mode + Apple Photos app (see USB guide in-app)
+- ✅ **Plan features** — Open issues, discuss architecture in PR comments
+
+**When you return to Mac:**
+- Open `FujiFileTransfer/FujiFileTransfer.xcodeproj` in Xcode
+- Build and run on Simulator (mock mode) or device (with camera)
+- See [DEVELOPMENT.md](DEVELOPMENT.md) for full setup
+
 ## Features
 
-- **Fast Wi-Fi Transfer**: Connect directly to your Fujifilm X-T5 over Wi-Fi
-- **Quick Thumbnail Loading**: Browse photos efficiently with optimized thumbnail fetching
-- **Multi-Select Import**: Select and import multiple photos at once
-- **Smart Import Tracking**: Automatically remembers which photos you've already imported
-- **Progress Tracking**: Real-time progress for each file transfer
-- **JPEG Priority**: Optimized for JPEG transfers (RAW support in protocol layer)
-- **Photos Library Integration**: Imported photos save directly to your iPhone's Photos library
-- **Simulator Support**: Mock mode for development and testing without a real camera
-- **USB Fallback Guide**: In-app instructions for USB-based import via Apple Photos
+**Simple, focused workflow:**
+1. **See photos** — Thumbnail grid loads immediately on connection
+2. **Tap to select** — Toggle selection with simple tap (clear visual state)
+3. **Import** — Single prominent button imports selected photos
+
+**Core capabilities:**
+- **Fast Wi-Fi Transfer**: Direct connection to Fujifilm X-T5 over Wi-Fi
+- **Automatic Connection**: App connects on launch (demo mode in Simulator)
+- **Smart Tracking**: Remembers which photos are already imported
+- **JPEG Priority**: Optimized for JPEG transfers (RAW supported but untested)
+- **Photos Integration**: Saves directly to iOS Photos library
+- **Minimal Setup**: Connection help available in menu, not blocking main workflow
+- **Demo Mode**: Fully functional Simulator support with 8 sample photos
 
 ## CI/CD
 
@@ -113,23 +132,33 @@ The app requests:
 
 ## Using the App
 
-### Wi-Fi Transfer Mode
+**Simplified workflow** — Photos first, setup help in menu:
 
-1. **Configure Camera**:
-   - On X-T5: Menu → Connection Setting → Wireless Settings → Wireless Communication
-   - Select "Connect to Smartphone"
-   - Camera will display "Waiting for connection"
+### Quick Start
 
-2. **Connect iPhone**:
-   - On iPhone: Settings → Wi-Fi
-   - Join the network created by the camera (usually "X-T5_XXXX")
-   - Return to the Fuji File Transfer app
+1. **On Camera**: Menu → Connection Setting → Wireless Settings → "Connect to Smartphone"
+2. **On iPhone**: Settings → Wi-Fi → Join camera network (X-T5_XXXX)
+3. **Open App**: Photos appear automatically
+4. **Tap photos** to select
+5. **Tap Import** button
 
-3. **Import Photos**:
-   - Tap "Connect to Camera"
-   - Wait for connection (camera may show confirmation prompt - tap OK)
-   - Browse thumbnails, select photos
-   - Tap "Import Selected" or "Import All New"
+### Interface
+
+- **Status bar** (top): Shows connection state or "Demo Mode" in Simulator
+- **Photo grid** (main): Tap any photo to toggle selection
+  - Green "new" indicator for not-yet-imported photos
+  - Checkmark shows selected state
+- **Import button** (bottom): Active when photos selected or new photos available
+  - "Import N Photos" when selection exists
+  - "Import All New" when no selection but new photos present
+  - Disabled with reason when nothing to import
+
+### Setup Help
+
+Tap **⋯ menu** (top right) for:
+- Camera setup instructions
+- USB import guide (fallback)
+- Mock mode toggle (Simulator)
 
 ### USB Transfer Mode
 
@@ -166,17 +195,21 @@ The implementation is based on reverse-engineering and open-source references. S
 
 ### vs. Fujifilm XApp
 
-**Advantages**:
-- Potentially faster thumbnail loading with direct protocol control
-- Multi-select workflow
-- Import tracking to avoid duplicates
-- Open source and hackable
+**Simpler:**
+- Photos-first interface (no multi-screen wizard)
+- One-tap selection, one Import button
+- Automatic connection (no manual pairing flow)
 
-**Limitations**:
+**Faster:**
+- Direct protocol control for thumbnail loading
+- Import tracking avoids re-downloading
+- Minimal chrome, maximum content
+
+**Limitations:**
 - No live view / remote shutter
 - No camera settings control
-- Single camera model focus (X-T5)
-- No Bluetooth pairing
+- Focused on X-T5 (may work with other models)
+- Compile-only (no App Store distribution yet)
 
 ## Building for Device
 
