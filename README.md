@@ -14,12 +14,29 @@ An iOS app for transferring photos from Fujifilm X-T5 cameras to iPhone over Wi-
 - **Simulator Support**: Mock mode for development and testing without a real camera
 - **USB Fallback Guide**: In-app instructions for USB-based import via Apple Photos
 
+## CI/CD
+
+This project includes a **compile-only CI workflow** that builds the app for iOS Simulator on every push and pull request:
+
+- **What it does**: Validates that the code compiles successfully without requiring signing credentials
+- **What it doesn't do**: Does not create device builds, TestFlight uploads, or App Store releases
+- **Requirements**: None - runs on free GitHub Actions runners with no Apple Developer Program needed
+
+The workflow builds for iOS Simulator using `CODE_SIGNING_ALLOWED=NO`, which means:
+- ✅ Code compilation and SwiftUI syntax validation work
+- ✅ Build errors are caught automatically
+- ❌ Device installation requires a paid Apple Developer Program membership ($99/year)
+- ❌ TestFlight/App Store distribution not included
+
+See [`.github/workflows/ios-build.yml`](.github/workflows/ios-build.yml) for the full configuration.
+
 ## Requirements
 
 - iOS 17.0 or later
 - iPhone or iPad
 - Fujifilm X-T5 camera (or compatible Fujifilm camera using the same protocol)
 - Xcode 15.0 or later (for building)
+- **For device installation**: Apple Developer Program membership (not required for Simulator builds)
 
 ## Project Architecture
 
@@ -162,9 +179,11 @@ The implementation is based on reverse-engineering and open-source references. S
 ## Building for Device
 
 1. Open the project in Xcode
-2. Select a connected iOS device or create a Simulator
+2. Select a connected iOS device (or use Simulator for testing)
 3. Update the bundle identifier if needed: `com.example.FujiFileTransfer`
-4. Select your development team
+4. **For device builds**: Select your development team in Signing & Capabilities
+   - Requires Apple Developer Program membership ($99/year)
+   - Free tier allows Simulator builds only
 5. Build and run (Cmd+R)
 
 ### Simulator vs. Device
