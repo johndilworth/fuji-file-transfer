@@ -1,0 +1,65 @@
+# NOTICE
+
+Fuji File Transfer
+Copyright (c) 2026
+
+This project implements the Fujifilm proprietary PTP-over-TCP protocol based on publicly available documentation and open-source references.
+
+## Third-Party Acknowledgments
+
+### libfuji
+- **Project**: https://github.com/petabyt/libfuji
+- **Author**: Daniel C (petabyt)
+- **License**: MIT License
+- **Usage**: Protocol specification reference, implementation concepts
+
+The libfuji project provides a C library for communicating with Fujifilm cameras over WiFi and USB. This project references libfuji's protocol documentation and implementation approach for understanding Fujifilm's proprietary PTP-over-TCP protocol.
+
+Key references:
+- PTP-over-TCP packet structures
+- Initialization sequence and handshake
+- Command/response packet formats
+- Device property codes
+
+### Fudge Protocol Documentation
+- **Article**: https://danielc.dev/blog/fudge1/
+- **Author**: Daniel C
+- **Description**: Technical writeup of Fujifilm camera protocol
+
+References the protocol analysis and reverse engineering work that documents:
+- Connection sequence details
+- Port number (55740)
+- GUID values for initialization
+- Multiple transfer modes
+
+## Implementation Notes
+
+This Swift implementation is an independent clean-room reimplementation. No source code was copied from GPL-licensed projects. The implementation is based on:
+
+1. Protocol specifications derived from open-source documentation
+2. Standard PTP/IP protocol specifications (ISO 15740)
+3. Publicly available technical documentation
+4. Independent testing and development
+
+## Protocol Details Referenced
+
+The following protocol elements are based on the referenced documentation:
+
+- **Initialization packet structure** (0x52 bytes, specific GUID values)
+- **Protocol version constant** (0x8F53E4F2)
+- **Default connection parameters** (host 192.168.0.1, port 55740)
+- **PTP operation codes** for standard operations
+- **USB-style PTP packet format** over TCP (non-standard PTP/IP behavior)
+
+## Disclaimer
+
+This is an unofficial implementation of the Fujifilm camera protocol. It is not affiliated with, authorized, maintained, sponsored, or endorsed by Fujifilm Corporation or any of its affiliates.
+
+The protocol implementation is based on publicly available information and reverse engineering work by independent developers. Use of this software is at your own risk.
+
+## Trademarks
+
+- Fujifilm, X-T5, and related marks are trademarks of FUJIFILM Corporation
+- iPhone, iOS, and related marks are trademarks of Apple Inc.
+
+All trademarks are the property of their respective owners.
