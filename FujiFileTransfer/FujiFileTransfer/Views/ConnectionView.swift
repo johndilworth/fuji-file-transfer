@@ -126,26 +126,62 @@ struct ConnectionView: View {
             Spacer()
             
             VStack(spacing: 12) {
-                Text("No Photos")
+                Text(emptyStateTitle)
                     .font(.title3)
                     .fontWeight(.semibold)
                 
-                Text("Camera not connected")
+                Text(emptyStateMessage)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
             
-            Button {
-                showingSetupHelp = true
-            } label: {
-                Text("Camera Setup")
+            VStack(spacing: 12) {
+                if case .error = viewModel.connectionState {
+                    Button {
+                        Task {
+                            await viewModel.retry()
+                        }
+                    } label: {
+                        Label("Retry Connection", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                
+                Button {
+                    showingSetupHelp = true
+                } label: {
+                    Text(case .error = viewModel.connectionState ? "Setup Help" : "Camera Setup")
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
             
             Spacer()
         }
         .padding()
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+    
+    private var emptyStateTitle: String {
+        switch viewModel.connectionState {
+        case .error:
+            return "Connection Failed"
+        case .disconnected, .connecting:
+            return "No Photos"
+        case .connected:
+            return "No Photos"
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        switch viewModel.connectionState {
+        case .error(let message):
+            return message
+        case .disconnected, .connecting:
+            return "Camera not connected"
+        case .connected:
+            return "No photos available"
+        }
     }
 }
 

@@ -61,6 +61,10 @@ class ConnectionViewModel: ObservableObject {
         transport = nil
     }
     
+    func retry() async {
+        await connect()
+    }
+    
     func getTransport() -> CameraTransport? {
         return transport
     }
