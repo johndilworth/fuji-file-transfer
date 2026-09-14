@@ -13,24 +13,44 @@ actor NetworkManager {
         
         connection = NWConnection(to: endpoint, using: parameters)
         
-        return try await withCheckedThrowingContinuation { continuation in
-            connection?.stateUpdateHandler = { [weak self] state in
-                switch state {
-                case .ready:
-                    Task {
-                        await self?.setConnected(true)
-                        continuation.resume()
+        return try await withThrowingTaskGroup(of: Void.self) { group in
+            var resumed = false
+            
+            group.addTask {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    self.connection?.stateUpdateHandler = { [weak self] state in
+                        guard !resumed else { return }
+                        
+                        switch state {
+                        case .ready:
+                            resumed = true
+                            Task {
+                                await self?.setConnected(true)
+                                continuation.resume()
+                            }
+                        case .failed(let error):
+                            resumed = true
+                            continuation.resume(throwing: TransportError.connectionFailed(error.localizedDescription))
+                        case .waiting(let error):
+                            print("Connection waiting: \(error)")
+                        default:
+                            break
+                        }
                     }
-                case .failed(let error):
-                    continuation.resume(throwing: TransportError.connectionFailed(error.localizedDescription))
-                case .waiting(let error):
-                    print("Connection waiting: \(error)")
-                default:
-                    break
+                    
+                    self.connection?.start(queue: .global())
                 }
             }
             
-            connection?.start(queue: .global())
+            group.addTask {
+                try await Task.sleep(nanoseconds: 12_000_000_000)
+                if !resumed {
+                    throw TransportError.timeout
+                }
+            }
+            
+            try await group.next()
+            group.cancelAll()
         }
     }
     

@@ -25,13 +25,8 @@ class FujiWiFiTransport: CameraTransport {
         updateConnectionState(.connecting)
         
         do {
-            // TODO: Add connection timeout (current: may hang indefinitely)
             try await networkManager.connect(host: host, port: port)
-            
-            // TODO: Fuji init may need retry logic if camera is "thinking"
-            try await performFujiInit()
-            
-            // TODO: OpenSession may require user to press OK on camera - no feedback yet
+            try await performFujiInitWithRetry()
             try await openSession()
             
             updateConnectionState(.connected)
@@ -58,25 +53,34 @@ class FujiWiFiTransport: CameraTransport {
             throw TransportError.notConnected
         }
         
-        // TODO: May need to enter RemoteMode first on newer cameras (X-T5)
-        // TODO: Handle multiple storage IDs (SD card slot 1 & 2)
         let storageIDs = try await getStorageIDs()
-        guard let storageID = storageIDs.first else {
+        guard !storageIDs.isEmpty else {
             throw TransportError.protocolError("No storage found on camera")
         }
         
-        // TODO: Add filter for image-only objects (skip folders, movies if needed)
-        let objectHandles = try await getObjectHandles(storageID: storageID)
+        var allImages: [CameraImage] = []
+        var failedObjectCount = 0
         
-        var images: [CameraImage] = []
-        for handle in objectHandles {
-            // TODO: Better error handling - currently skips failed objects silently
-            if let imageInfo = try? await getObjectInfo(objectHandle: handle) {
-                images.append(imageInfo)
+        for storageID in storageIDs {
+            let objectHandles = try await getObjectHandles(storageID: storageID)
+            
+            for handle in objectHandles {
+                do {
+                    let imageInfo = try await getObjectInfo(objectHandle: handle)
+                    if imageInfo.format != .unknown && imageInfo.format != .movie {
+                        allImages.append(imageInfo)
+                    }
+                } catch {
+                    failedObjectCount += 1
+                }
             }
         }
         
-        return images
+        if allImages.isEmpty && failedObjectCount > 0 {
+            throw TransportError.protocolError("Failed to retrieve image info (\(failedObjectCount) objects)")
+        }
+        
+        return allImages
     }
     
     func downloadThumbnail(objectID: UInt32) async throws -> Data {
@@ -98,6 +102,24 @@ class FujiWiFiTransport: CameraTransport {
     private func updateConnectionState(_ newState: CameraConnectionState) {
         connectionState = newState
         onStateChanged?(newState)
+    }
+    
+    private func performFujiInitWithRetry(maxAttempts: Int = 2) async throws {
+        var lastError: Error?
+        
+        for attempt in 1...maxAttempts {
+            do {
+                try await performFujiInit()
+                return
+            } catch {
+                lastError = error
+                if attempt < maxAttempts {
+                    try await Task.sleep(nanoseconds: 800_000_000)
+                }
+            }
+        }
+        
+        throw lastError ?? TransportError.protocolError("Init failed after \(maxAttempts) attempts")
     }
     
     private func performFujiInit() async throws {

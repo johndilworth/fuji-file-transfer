@@ -28,8 +28,9 @@ struct CameraImage: Identifiable {
         static func from(objectFormat: UInt16) -> ImageFormat {
             switch objectFormat {
             case 0x3801: return .jpeg
-            case 0x3800: return .unknown
-            case 0x300B: return .movie
+            case 0x3800, 0xB101: return .raw
+            case 0x3802: return .heif
+            case 0x300B, 0x300C: return .movie
             default: return .unknown
             }
         }
